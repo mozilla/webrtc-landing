@@ -3,57 +3,106 @@
   <head>
     <meta charset="utf-8"/>
     <meta http-equiv="expires" content="0/> <!-- force check if the page changed -->
-    <link href='https://fonts.googleapis.com/css?family=Gentium+Basic:400,700' rel='stylesheet' type='text/css'>
-    <title>WebRTC Test Landing Page</title>
-    <style>
-      body {
-        font-family: "Gentium Basic", serif;
-      }
-    </style>
     <script src="detect.js"></script>
+    <script src="jquery.js"></script>
+    <script src="bootstrap.js"></script>
+    <link rel="stylesheet" href="bootstrap.css" />
+    <title>WebRTC Test Landing Page</title>
   </head>
   <body>
-    <h2>WebRTC Test Landing Page</h2>
-    <p>Following are a few pages to test various aspects of Mozilla's
-    implementation of WebRTC:</p>
-    <ul>
-      <li><a href="gum_test.html">getUserMedia example</a></li>
-      <li><a href="pc_test.html">Single host 'chat' via mozRTCPeerConnection</a></li>
-      <li><a href="data_test.html">Single host DataChannels demo</a></li>
-      <li><a href="http://nightly-gupshup.herokuapp.com/">Multi-person video chat via
-          mozRTCPeerConnection for Nightly</a> -- <a
-          href="https://github.com/jesup/nightly-gupshup.git">code on github</a></li>
-    </ul>
-    <b>Tests for older FF versions</b>
-    <ul>
-      <li><a href="http://gupshup.herokuapp.com/">Video chat via mozRTCPeerConnection
-          (for Aurora/Firefox 20 only!)</a> -- <a
-          href="https://github.com/anantn/gupshup.git">code on
-          github</a></li>
-      <li><a href="data_test_old.html">Old single-host DataChannels demo
-          (FF21 and old FF22 Nightlies)</a><br>
-	   The DataChannel wireline protocol and JS API changed at the FF22
-	   uplift to Aurora (2013/4/2); <b><font
-	   style="background-color:red">and also a backwards-incompatible
-	   wireline bugfix on 2013/4/9</font></b>
-	   see <a href="DataChannel_changes.html">DataChannel Changes</a>.
-      </li>
-    </ul>
-    <h3 id="gum" style="color: red; display: none;">
-      mozGetUserMedia is missing, do you have the latest
-      <a href="http://nightly.mozilla.org/">Nightly</a> and set
-      <i>media.navigator.enabled</i> to true?
-    </h3>
-    <h3 id="pc" style="color: red; display: none;">
-      mozRTCPeerConnection is missing, do you have the latest
-      <a href="http://nightly.mozilla.org/">Nightly</a> and set
-      <i>media.peerconnection.enabled</i> to true?
-    </h3>
-    <h3 id="version" style="color: red; display: none;">
-      You have an older version of Firefox that supports WebRTC but may have
-      an incompatible API. For best results, please download the latest
-      <a href="http://nightly.mozilla.org/">Nightly</a>!
-    </h3>
+	<div class="row">
+		<div class="hero-unit span12 offset2" style="text-align:center">
+				<h1>WebRTC Test Landing Page</h1>
+				<p>Following are a few pages to test various aspects of Mozilla's implementation of WebRTC.</p>
+		</div>
+	</div>
+    
+	<div class="row">
+	<div id="gum" class="span12 offset2 alert alert-error fade in" style="display: none;">
+		<button type="button" class="close" data-dismiss="alert">&times;</button>
+		<h4>mozGetUserMedia is missing!</h4>
+		Do you have the latest <a href="http://nightly.mozilla.org/">Nightly</a> and set <i>media.navigator.enabled</i> to true?
+	</div>
+	</div>
+	
+	<div class="row">
+	<div id="pc" class="span12 offset2 alert alert-error" style="display: none;">
+		<button type="button" class="close" data-dismiss="alert">&times;</button>
+		<h4>mozRTCPeerConnection is missing!</h4>
+		Do you have the latest <a href="http://nightly.mozilla.org/">Nightly</a> and set <i>media.peerconnection.enabled</i> to true?
+	</div>
+	</div>
+
+	<div class="row">
+	<div id="pc" class="span12 offset2 alert" style="display: none;">
+		<button type="button" class="close" data-dismiss="alert">&times;</button>
+		<h4>Your Firefox is old.</h4>
+		You have an older version of Firefox that supports WebRTC but may have an incompatible API. For best results, please download the latest <a href="http://nightly.mozilla.org/">Nightly</a>!
+	</div>
+	
+	<div class="row offset2">
+			<div class="span3">
+			<div class="well">
+				<h3>getUserMedia example</h3>      
+				<p></p>
+				<p><a class="btn btn-large" href="gum_test.html">Try Demo</a></p>
+			</div>
+			</div>
+		
+			<div class="span3">
+			<div class="well">
+				<h3>Single host 'chat'</h3>      
+				<p>Single host 'chat' via mozRTCPeerConnection.</p>
+				<p><a class="btn btn-large" href="pc_test.html">Try Demo</a></p>
+			</div>
+			</div>
+		
+			<div class="span3">
+			<div class="well">
+				<h3>Single host DataChannels</h3>      
+				<p>Code on <a href="https://github.com/jesup/nightly-gupshup.git">github</a>.</p>
+				<p><a class="btn btn-large" href="data_test.html">Try Demo</a></p>
+			</div>
+			</div>
+		
+			<div class="span3">
+			<div class="well">
+				<h3>Multi-person video chat</h3>      
+				<p>Multi-person video chat via mozRTCPeerConnection for Nightly. Code on <a href="http://github.com/anantn/gupshup.git">github</a>.</p>
+				<p><a class="btn btn-large" href="http://gupshup.herokuapp.com/">Try Demo</a></p>
+			</div>
+			</div>
+	</div>
+	
+	<hr>
+	<br>
+	
+	<div class="row offset1">
+		<h2>Tests for older FF versions</h2>
+	</div>
+
+	
+	<div class="row offset2">
+	
+			<div class="span3">
+			<div class="well">
+				<h5>Video chat via mozRTCPeerConnection</h5>      
+				<p>For Aurora/Firefox 20 only! Code on <a href="https://github.com/anantn/gupshup.git">github</a></p>
+				<p><a class="btn btn-large" href="http://gupshup.herokuapp.com/">Try Demo</a></p>
+			</div>
+			</div>
+			
+			<div class="span3">
+			<div class="well">
+				<h3>Old single-host DataChannels</h3>      
+				<p>FF21 and old FF22 Nightlies! The DataChannel wireline protocol and JS API changed at the FF22 uplift to Aurora (2013/4/2); <font style="color:red">and also a backwards-incompatible wireline bugfix on 2013/4/9</font> see <a href="DataChannel_changes.html">DataChannel Changes</a>.</p>
+				<p><a class="btn btn-large" href="data_test_old.html">Try Demo</a></p>
+			</div>
+			</div>
+	</div>
+	
+   
+    
     <script>
       if (!navigator.mozGetUserMedia) {
         document.getElementById("gum").style.display = "block";

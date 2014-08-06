@@ -45,7 +45,9 @@
 <input type="checkbox" id="disable_audio" value="Disable audio" onclick="disable_media(pc1, 0, 0);">
 <label for="disable_audio">Disable audio</label>
 <input type="checkbox" id="requireh264" value="Require H.264">
-<label for="fake">Require H.264 video</label>
+<label for="requireh264">Require H.264 video</label>
+<input type="checkbox" id="requireg722" value="Require G.722">
+<label for="requireg722">Require G.722</label>
 </div><br>
 <div>
 <div id="player1">
@@ -85,7 +87,9 @@
   let video_disable = document.getElementById("disable_video");
   let audio_disable = document.getElementById("disable_audio");
   let requireh264 = document.getElementById("requireh264");
+  let requireg722 = document.getElementById("requireg722");
   requireh264.checked = false;
+  requireg722.checked = false;
 
   let pc1;
   let pc2;
@@ -133,14 +137,25 @@
       pc1_offer = offer;
       log("No VP8 Offer: " + offer.sdp);
 
-      if (offer.sdp.match(/a=rtpmap:[0-9]+ H264/g)) {
-        pc1.setLocalDescription(offer, step2, failed);
-      } else {
+      if (!offer.sdp.match(/a=rtpmap:[0-9]+ H264/g)) {
         log("No H264 found in the offer!!!");
+        return;
       }
-    } else {
-      pc1.setLocalDescription(offer, step2, failed);
     }
+
+    if (requireg722.checked) {
+      // to enforce the usage of G.722 we remove other codecs from the offer
+      offer.sdp = removeNonG722(offer.sdp);
+      pc1_offer = offer;
+      log("G.722 only Offer: " + offer.sdp);
+
+      if (!offer.sdp.match(/a=rtpmap:[0-9]+ G722/g)) {
+        log("No G722 found in the offer!!!");
+        return;
+      }
+    }
+
+    pc1.setLocalDescription(offer, step2, failed);
   }
 
   // Also remove mode 0 if it's offered
@@ -153,6 +168,13 @@
     updated_sdp = updated_sdp.replace("a=rtcp-fb:120 nack\r\n","");
     updated_sdp = updated_sdp.replace("a=rtcp-fb:120 nack pli\r\n","");
     updated_sdp = updated_sdp.replace("a=rtcp-fb:120 ccm fir\r\n","");
+    return updated_sdp;
+  }
+
+  // Remove anything that's not G.722 from the m=video line
+  function removeNonG722(sdp) {
+    updated_sdp = sdp.replace(/m=audio ([0-9]+) RTP\/SAVPF ([0-9 ]*)/g, "m=audio $1 RTP\/SAVPF 9");
+
     return updated_sdp;
   }
 
@@ -171,11 +193,11 @@
     log("Answer:  " + answer.sdp);
     pc2_answer = answer;
 
-    if (requireh264.checked) {
-      if (answer.sdp.match(/a=rtpmap:[0-9]+ H264/g)) {
+    if (requireg722.checked) {
+      if (answer.sdp.match(/a=rtpmap:[0-9]+ G722/g)) {
         pc2.setLocalDescription(answer, step5, failed);
       } else {
-        log("No H264 found in the answer!!!");
+        log("No G722 found in the answer!!!");
       }
     } else {
       pc2.setLocalDescription(answer, step5, failed);

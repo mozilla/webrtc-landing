@@ -1,0 +1,330 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  <title>Simple mozRTCPeerConnection Video Test</title>
+  <style>
+    #player1 {
+      position:relative;
+      width:33%;
+      height:240px;
+      float:right;
+    }
+    #player2 {
+      position:relative;
+      width:66%;
+      height:240px;
+      float:left;
+    }
+    #mainvideo {
+      position:absolute;
+      top:0;
+      left:0;
+      z-index:0;
+    }
+    #player2screen {
+      position:absolute;
+      top:0;
+      right:0;
+      z-index:0;
+    }
+    #localvideo1, #localvideo2 {
+      position:absolute;
+      top:0;
+      left:0;
+      z-index:1;
+    }
+
+    .hidden 
+    {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Multistream & Renegotiation Test</h1>
+
+<div>
+<button id="callbutton" onclick="start();">Start Call</button>
+<br>
+<div>
+<div id="player1">
+<video tabindex="0" id="pc1video" class="mainvideo" controls="controls" height="240" width="320" muted autoplay></video>
+<video tabindex="0" id="localvideo1" controls="controls" height="120" width="160" muted></video>
+</div>
+<div id="player2">
+<div id="player2video">
+<video tabindex="0" id="pc2video" class="mainvideo" controls="controls" height="240" width="320" muted autoplay></video>
+<video tabindex="0" id="localvideo2" controls="controls" height="120" width="160" muted></video>
+</div>
+<div id="player2screen">
+<div id="divscreen" class="hidden">
+  <button id="screenbutton" onclick="screenShare();">Share Screen</button>
+</div>
+<video tabindex="0" id="screenvideo" class="hidden" controls="controls" height="240" width="320" muted autoplay></video>
+</div>
+</div><br>
+<br style="clear: left;" />
+</div>
+<div id="log"></div>
+
+
+<script type="application/javascript;version=1.8">
+  function log(msg) {
+    let div = document.getElementById("log");
+    //div.innerHTML = div.innerHTML + "<p>" + msg + "</p>";
+    div.innerHTML =  "<p>" + msg + "</p>" + div.innerHTML;
+  }
+
+  function clearlog() {
+    document.getElementById("log").innerHTML = "<p></p>";
+  }
+
+  // replace CR NL with HTML breaks
+  function sdpPrettyPrint(sdp) {
+    return sdp.replace(/[\r\n]+/g, '<br>');
+  }
+
+  function failed(err, constraints) {
+    log("Error name: " + err.name);
+    log("Error message: " + err.message);
+    log("Constraints: " + JSON.stringify(constraints));
+  }
+
+  let pc1video = document.getElementById("pc1video");
+  let pc2video = document.getElementById("pc2video");
+  let pc3video = document.getElementById("screenvideo");
+  pc1video.onplay = function() {log("Play for pc1");};
+  pc2video.onplay = function() {log("Play for pc2");};
+  pc3video.onplay = function() {log("Play for pc3");};
+
+  let localvideo1 = document.getElementById("localvideo1");
+  let localvideo2 = document.getElementById("localvideo2");
+
+  let callbutton = document.getElementById("callbutton");
+  let screenbutton = document.getElementById("screenbutton");
+
+  let pc1;
+  let pc2;
+
+  let pc1_offer;
+  let pc2_answer;
+
+  let screenStream;
+  let screenSenders = [];
+
+  // pc1.createOffer finished, call pc1.setLocal
+  function step1(offer) {
+    log("Offer:  " + sdpPrettyPrint(offer.sdp));
+    pc1_offer = offer;
+
+    pc1.setLocalDescription(offer).then(step2, failed);
+  }
+
+  // pc1.setLocal finished, call pc2.setRemote
+  function step2() {
+    pc1.onicecandidate = function(obj) {
+      if (obj.candidate) {
+        log("pc1 found ICE candidate: " + JSON.stringify(obj.candidate));
+        pc2.addIceCandidate(obj.candidate);
+      } else {
+        log("pc1 got end-of-candidates signal");
+      }
+    }
+
+    pc2.setRemoteDescription(pc1_offer).then(step3, failed);
+  };
+
+  // pc2.setRemote finished, call pc2.createAnswer
+  function step3() {
+    pc2.didSetRemote = true;
+    while (pc2.ice_queued.length > 0) {
+      pc2.addIceCandidate(pc2.ice_queued.shift());
+    }
+    pc2.createAnswer().then(step4, failed);
+  }
+
+  // pc2.createAnswer finished, call pc2.setLocal
+  function step4(answer) {
+    log("Answer:  " + sdpPrettyPrint(answer.sdp));
+    pc2_answer = answer;
+
+    pc2.setLocalDescription(answer).then(step5, failed);
+  }
+
+  // pc2.setLocal finished, call pc1.setRemote
+  function step5() {
+    pc2.onicecandidate = function(obj) {
+      if (obj.candidate) {
+        log("pc2 found ICE candidate: " + JSON.stringify(obj.candidate));
+        pc1.addIceCandidate(obj.candidate);
+      } else {
+        log("pc2 got end-of-candidates signal");
+      }
+    }
+
+    pc1.setRemoteDescription(pc2_answer).then(step6, failed);
+  }
+
+  // pc1.setRemote finished
+  function step6() {
+    pc1.didSetRemote = true;
+    while (pc1.ice_queued.length > 0) {
+      pc1.addIceCandidate(pc1.ice_queued.shift());
+    }
+    log("Signaling is done");
+
+    showScreenButton();
+  }
+
+  function showScreenButton() {
+    document.getElementById('divscreen').style.display = 'block';
+  }
+
+  function hideScreenButton() {
+    hideScreenVideo();
+    document.getElementById('divscreen').style.display = 'none';
+  }
+
+  function showScreenVideo() {
+    screenbutton.innerHTML = "Stop Screen Share";
+    screenbutton.onclick = stopScreenShare;
+    pc3video.style.display = 'block';
+  }
+
+  function hideScreenVideo() {
+    screenbutton.innerHTML = "Share Screen";
+    screenbutton.onclick = screenShare;
+    pc3video.style.display = 'none';
+  }
+
+  function stopScreenShare() {
+    screenStream.stop();
+    screenSenders.forEach(sender => {
+      pc1.removeTrack(sender);
+    });
+    screenSenders = [];
+    //pc3video.pause();
+    //pc3video.mozSrcObject.stop();
+
+    hideScreenVideo();
+  }
+
+  function screenShare() {
+    let screenConstraints = {video: {mediaSource: "screen"}};
+
+    pc1.onnegotiationneeded = function (event) {
+      log("pc1 onnegotiationneeded fired");
+      pc1.createOffer(step1, failed);
+    };
+
+    navigator.mediaDevices.getUserMedia(screenConstraints)
+      .then(stream => {
+        log("Got a screen share stream");
+        screenStream = stream;
+
+        showScreenVideo();
+
+        stream.getTracks().forEach(track => {
+          screenSenders.push(pc1.addTrack(track, stream));
+        });
+      });
+  }
+
+  function start() {
+    callbutton.innerHTML = "Stop Call";
+    callbutton.onclick = stop;
+    clearlog();
+
+    pc1 = new mozRTCPeerConnection();
+    pc2 = new mozRTCPeerConnection();
+    pc1.didSetRemote = false;
+    pc2.didSetRemote = false;
+    pc1.ice_queued = [];
+    pc2.ice_queued = [];
+
+    pc1.oniceconnectionstatechange = function() {
+      if (pc1.iceConnectionState == "connected") {
+        log("HIP HIP HORRAY PC1 is connected");
+      }
+    }
+
+    pc2.oniceconnectionstatechange = function() {
+      if (pc2.iceConnectionState == "connected") {
+        log("HIP HIP HORRAY PC2 is connected");
+      }
+    }
+
+    pc1.onicecandidate = function(obj) {
+      if (obj.candidate) {
+        log("pc1 found ICE candidate: " + JSON.stringify(obj.candidate));
+        if (pc2.didSetRemote) {
+          pc2.addIceCandidate(obj.candidate);
+        } else {
+          pc2.ice_queued.push(obj.candidate);
+        }
+      } else {
+        log("pc1 got end-of-candidates signal");
+      }
+    }
+
+    pc2.onicecandidate = function(obj) {
+      if (obj.candidate) {
+        log("pc2 found ICE candidate: " + JSON.stringify(obj.candidate));
+        if (pc1.didSetRemote) {
+          pc1.addIceCandidate(obj.candidate);
+        } else {
+          pc1.ice_queued.push(obj.candidate);
+        }
+      } else {
+        log("pc2 got end-of-candidates signal");
+      }
+    }
+
+    pc1.onaddstream = function(obj) {
+      log("pc1 got remote stream from pc2 " + obj.type);
+      pc1video.mozSrcObject = obj.stream;
+    }
+
+    pc2.onaddstream = function(obj) {
+      var stream = obj.stream;
+      log("pc2 remote stream has " + stream.getAudioTracks().length + " audio tracks and " + stream.getVideoTracks().length + " video tracks");
+      if (stream.getAudioTracks().length == 0) {
+        pc3video.mozSrcObject = obj.stream;
+      } else {
+        pc2video.mozSrcObject = obj.stream;
+      }
+    }
+
+    let videoConstraints  = {audio: true, video: true};
+    let fakeVideoConstraints = {video: true, fake: true };
+
+    navigator.mediaDevices.getUserMedia(videoConstraints)
+      .then(stream1 => {
+        localvideo1.mozSrcObject = stream1;
+        localvideo1.play();
+        pc1.addStream(stream1);
+
+        navigator.mediaDevices.getUserMedia(fakeVideoConstraints)
+          .then(stream2 => {
+            localvideo2.mozSrcObject = stream2;
+            localvideo2.play();
+            pc2.addStream(stream2);
+            // Start the signaling.
+            pc1.createOffer().then(step1, failed);
+          });
+      });
+  }
+
+  function stop() {
+    pc1.close();
+    pc2.close();
+
+    callbutton.innerHTML = "Start Call";
+    callbutton.onclick = start;
+
+    hideScreenButton();
+  }
+</script>
+
+
+</body></html>

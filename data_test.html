@@ -332,14 +332,13 @@ function start() {
     dc1.onopen = function() {
       log("pc1 onopen fired for " + dc1);
 
-      if (preset.checked) {
         dict = preset.checked ? {protocol:"text/chat", negotiated:true,
                                  id:stream_num.value } : {}; // reliable (TCP-like)
-        dc2 = pc2.createDataChannel("This is pc2", dict);
-        let ev = {};
-        ev.channel = dc2;
-        pc2.ondatachannel(ev);
-      }
+      dc2 = pc2.createDataChannel("This is pc2", dict);
+      let ev = {};
+      ev.channel = dc2;
+      pc2.ondatachannel(ev);
+
       dc1.send("pc1 says this will likely be queued...");
     }
     dc1.onclose = function() {

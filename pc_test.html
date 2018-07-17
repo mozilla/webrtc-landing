@@ -524,9 +524,9 @@
     }
 
     if (idp) {
-      pc1.setIdentityProvider(idp.domain, idp.protocol, idp.usera);
+      pc1.setIdentityProvider(idp.domain, { idp: idp.protocol, name: idp.usera });
       pc1.peerIdentity.then(id => log('pc1 connected to "' + id.name + '"'));
-      pc2.setIdentityProvider(idp.domain, idp.protocol, idp.userb);
+      pc2.setIdentityProvider(idp.domain, { idp: idp.protocol, name: idp.userb });
       pc2.peerIdentity.then(id => log('pc2 connected to "' + id.name + '"'));
     }
 

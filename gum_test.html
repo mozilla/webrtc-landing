@@ -3,7 +3,7 @@
 <head>
   <title>gUM Test Page</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8" charset="utf-8">
-  <link href='https://fonts.googleapis.com/css?family=Gentium+Basic:400,700' rel='stylesheet' type='text/css'>
+  <link href="https://fonts.googleapis.com/css?family=Gentium+Basic:400,700" rel="stylesheet" type="text/css">
   <style>
     #main {
       display: block;
@@ -46,7 +46,7 @@
 </head>
 <body>
   <div id="main">
-    <h2><b>getUserMedia Test Page</b></h2>
+    <h2><b>getUserMedia / getDisplayMedia Test Page</b></h2>
     <p><a href="https://mozilla.github.io/webrtc-landing">Main webrtc demo page</a></p>
 
     <div id="gum_warn" style="display: none">
@@ -57,12 +57,10 @@
     </div>
 
     <div id="startbuttons">
-      <input value="Video" onclick="startVideo();" type="button">
-      <input value="Audio" onclick="startAudio();" type="button">
-      <input value="Audio &amp; Video" onclick="startAudioVideo();" type="button">
-      <input value="Screen" onclick="startScreen();" type="button">
-      <input value="Window" onclick="startWindow();" type="button">
-      <input value="Application" onclick="startApplication();" type="button">
+      <input value="Camera" onclick="startVideo();" type="button">
+      <input value="Microphone" onclick="startAudio();" type="button">
+      <input value="Camera &amp; microphone" onclick="startAudioVideo();" type="button">
+      <input value="Screen capture" onclick="startScreen();" type="button">
       <br><input type="text" id="fps_input" value="0">
     <label for="fps_input">FPS desired (0 for default)</label>
     </div>
@@ -85,129 +83,74 @@
     document.getElementById("gum_warn").style.display = "none";
   }
 
-  var video_status = false;
-  var video = document.createElement("video");
+  let video_status = false;
+  const video = document.createElement("video");
   video.setAttribute("width", 640);
   video.setAttribute("height", 480);
 
-  var muted = document.createElement("input");
+  const muted = document.createElement("input");
   muted.type = "checkbox";
   muted.checked = true;
-  muted.onclick = function() { video.muted = muted.checked; };
+  muted.onclick = () => { video.muted = muted.checked; };
 
-  var mute = document.createElement("label");
-  mute.innerHTML = "Muted";
+  const mute = document.createElement("label");
+  mute.innerHTML = "Volume mute";
   mute.insertBefore(muted, mute.firstChild);
 
-  var snapshots = [];
+  const snapshots = [];
 
-  var audio_status = false;
-  var audio = document.createElement("audio");
+  let audio_status = false;
+  const audio = document.createElement("audio");
   audio.setAttribute("controls", true);
 
-  var start = document.getElementById("startbuttons");
-  var stop = document.getElementById("stopbuttons");
+  const start = document.getElementById("startbuttons");
+  const stop = document.getElementById("stopbuttons");
 
-  var message = document.getElementById("message");
-  var content = document.getElementById("content");
-  var frames = document.getElementById("frames");
-  var snapshot = document.getElementById("snapshot");
-  var fps = document.getElementById("fps");
+  const message = document.getElementById("message");
+  const content = document.getElementById("content");
+  const frames = document.getElementById("frames");
+  const snapshot = document.getElementById("snapshot");
+  const fps = document.getElementById("fps");
 
-  var fps_input = document.getElementById("fps_input");
+  const fps_input = document.getElementById("fps_input");
 
-  var saved_stream = null;
-  var capturing = false;
-  var running = false;
+  let saved_stream = null;
+  let capturing = false;
+  let running = false;
 
-  var fps_now = 0;
-  var fps_total = 0;
-  var last_fps_time;
-  var first_fps_time;
-  var last_fps_frames;
-  var first_fps_frames;
-  var fps_constraint;
-
-  function set_fps() {
-    if (fps_input.value == 0 &&
-        mediaConstraints.video != null) {
-      mediaConstraints.video.frameRate = null;
-	//dump("Removing frameRate\n");
-    } else if (fps_input.value > 0 &&
-	fps_input.value < 200 &&
-	mediaConstraints.video) {
-	if (!mediaConstraints.video.frameRate) {
-	    mediaConstraints.video.frameRate = {ideal: fps_input.value};
-	} else {
-	    // I assume if framerate is there ideal is
-	    mediaConstraints.video.frameRate.ideal = fps_input.value;
-	}
-      //dump("Setting framerate to " + fps_input.value + "\n");
-    }
-  }
+  let fps_now = 0;
+  let fps_total = 0;
+  let last_fps_time;
+  let first_fps_time;
+  let last_fps_frames;
+  let first_fps_frames;
+  let fps_constraint;
 
   function startScreen() {
     video_status = true;
-    mediaConstraints = {
-      video: {
-        mediaSource: "screen"
-      },
-    };
-    set_fps();
-    message.innerHTML = "<p>Note: enable media.getusermedia.screensharing.enabled in about:config</p>";
-    startMedia(mediaConstraints);
-  }
-
-  function startWindow() {
-    video_status = true;
-    mediaConstraints = {
-      video: {
-        mediaSource: "window"
-      }
-    };
-    set_fps();
-    message.innerHTML = "<p>Note: enable media.getusermedia.screensharing.enabled in about:config</p>";
-    startMedia(mediaConstraints);
-  }
-
-  function startApplication() {
-    video_status = true;
-    mediaConstraints = {
-      video: {
-        mediaSource: "application"
-      }
-    };
-    set_fps();
-    message.innerHTML = "<p>Note: enable media.getusermedia.screensharing.enabled in about:config</p>";
-    startMedia(mediaConstraints);
+    startMedia("getDisplayMedia", {video: true});
   }
 
   function startAudioVideo() {
     video_status = true;
     audio_status = true;
-    mediaConstraints = {video:true, audio:true};
-    set_fps();
-    startMedia(mediaConstraints);
+    startMedia("getUserMedia", {video: true, audio: true});
   }
 
   function startAudio() {
     audio_status = true;
-    mediaConstraints = {audio:true};
-    set_fps();
-    startMedia(mediaConstraints);
+    startMedia("getUserMedia", {audio: true});
   }
 
   function startVideo() {
     video_status = true;
-      mediaConstraints = {video:true};
-    set_fps();
-    startMedia(mediaConstraints);
+    startMedia("getUserMedia", {video: true});
   }
 
   function stopMedia() {
     if (video_status) {
       if (video.srcObject) {
-        video.srcObject.stop();
+        for (const track of video.srcObject.getTracks()) track.stop();
       }
       video.srcObject = null;
       content.removeChild(video);
@@ -220,7 +163,7 @@
       video_status = false;
     } else if (audio_status) {
       if (audio.srcObject) {
-        audio.srcObject.stop();
+        for (const track of audio.srcObject.getTracks()) track.stop();
       }
       audio.srcObject = null;
       content.removeChild(audio);
@@ -255,64 +198,59 @@
     }
   }
 
-  function getusermedia_error(err, params) {
-    if (params.video && params.video.mediaSource) {
-      if (location.protocol != "https:") {
-        message.innerHTML = "<p class='error'>" + err + "</p>" +
-          "<p>Screen/window sharing now requires the site be loaded from an https: URL</p>" +
-          "<p>Reloading on https: in 10 seconds</p>";
-        setTimeout(function() {
-            window.location.href = "https:" + window.location.href.substring(window.location.protocol.length);
-          }, 10000);
-      } else {
-        message.innerHTML = "<p class='error'>" + err + "</p>" +
-          "<p>In <a href=\"about:config\">about:config</a>, please enable media.getusermedia.screensharing.enabled<br> and add this" +
-          " site's domain name to media.getusermedia.screensharing.allowed_domains in about:config</p>";
-      }
-    } else {
-        message.innerHTML = "<p class='error'>" + err + "</p>";
-    }
-    stopMedia();
-  }
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-  function startMedia(param) {
+  async function startMedia(gum, constraints) {
+    if (constraints.video) {
+      const frameRate = fps_input.value || undefined;
+      constraints.video = Object.assign(constraints.video, {frameRate});
+    }
     stop.style.display = "block";
     start.style.display = "none";
-    var p = navigator.mediaDevices.getUserMedia(param)
-      .then(function(stream) {
-        message.innerHTML = "<p>Success!</p>";
-        if (video_status) {
-          content.appendChild(video);
-          if (audio_status) {
-            controls.appendChild(mute);
-            video.muted = muted.checked;
-          }
-          video.srcObject = stream;
-          video.play();
-          frames.innerHTML = '';
-          stopbuttons.appendChild(snapshot);
-          first_fps_time = last_fps_time = new Date();
-          first_fps_frames = last_fps_frames = video.mozPaintedFrames;
-          fps.innerHTML="FPS now:  0.0 , entire capture:  0.0";
-          setTimeout(get_fps, 2000);
-        } else if (audio_status) {
-          content.appendChild(audio);
-          audio.srcObject = stream;
-          audio.play();
+    try {
+      const stream = await navigator.mediaDevices[gum](constraints);
+      message.innerHTML = "<p>Success!</p>";
+      if (video_status) {
+        content.appendChild(video);
+        if (audio_status) {
+          controls.appendChild(mute);
+          video.muted = muted.checked;
         }
-        running = true;
-      })
-    .catch(function (err) { getusermedia_error(err, param); });
+        video.srcObject = stream;
+        video.play();
+        frames.innerHTML = '';
+        stopbuttons.appendChild(snapshot);
+        first_fps_time = last_fps_time = new Date();
+        first_fps_frames = last_fps_frames = video.mozPaintedFrames;
+        fps.innerHTML="FPS now:  0.0 , entire capture:  0.0";
+        setTimeout(get_fps, 2000);
+      } else if (audio_status) {
+        content.appendChild(audio);
+        audio.srcObject = stream;
+        audio.play();
+      }
+      running = true;
+    } catch (err) {
+      if (location.protocol != "https:") {
+        message.innerHTML = `<p class='error'>${err}</p>
+          <p>getUserMedia and getDisplayMedia now require the site be loaded from an https URL</p>
+          <p>Reloading page in https in 10 seconds</p>`;
+        await wait(10000);
+        window.location.href = `https:${window.location.href.substring(window.location.protocol.length)}`;
+      } else {
+        message.innerHTML = `<p class='error'>${err}</p>`;
+      }
+      stopMedia();
+    }
   }
 
   function get_fps() {
     if (running) {
-      var now = new Date();
-      var frames = video.mozPaintedFrames;
-      fps_now =   (frames - last_fps_frames)/((now - last_fps_time)/1000);
+      const now = new Date();
+      const frames = video.mozPaintedFrames;
+      fps_now = (frames - last_fps_frames)/((now - last_fps_time)/1000);
       fps_total = (frames - first_fps_frames)/((now - first_fps_time)/1000);
-      fps.innerHTML="FPS now: " + fps_now.toFixed(1) + " , entire capture: " + fps_total.toFixed(1);
-      //dump("FPS: " + fps_now + ", entire capture: " + fps_total + "\n");
+      fps.innerHTML= `FPS now: ${fps_now.toFixed(1)} , entire capture: ${fps_total.toFixed(1)}`;
       last_fps_time = now;
       last_fps_frames = frames;
       setTimeout(get_fps, 1000);
@@ -331,20 +269,19 @@
 
   function captureImage() {
     if (video_status && capturing) {
-      //dump("Capturing len " + snapshots.length + "\n");
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
 
-      canvas.width  = video.videoWidth/4;
-      canvas.height = video.videoHeight/4;
+      canvas.width  = video.videoWidth / 4;
+      canvas.height = video.videoHeight / 4;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      if (snapshots.unshift(canvas) > 4)
+      if (snapshots.unshift(canvas) > 4) {
         snapshots.length = 4;
-      frames.innerHTML = '';
-      for(var i=0; i < snapshots.length; i++) {
-        frames.appendChild(snapshots[i]);
       }
-
+      frames.innerHTML = '';
+      for (const snapshot of snapshots) {
+        frames.appendChild(snapshot);
+      }
       setTimeout(captureImage, 2000);
     }
   }

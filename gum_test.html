@@ -42,6 +42,9 @@
     p.error {
       color: red;
     }
+    input[type=number] {
+      width: 65px;
+    }
   </style>
 </head>
 <body>
@@ -61,8 +64,10 @@
       <input value="Microphone" onclick="startAudio();" type="button">
       <input value="Camera &amp; microphone" onclick="startAudioVideo();" type="button">
       <input value="Screen capture" onclick="startScreen();" type="button">
-      <br><input type="text" id="fps_input" value="0">
-    <label for="fps_input">FPS desired (0 for default)</label>
+      <br>
+      <input id="fps_range" min="0" max="120" value="0" type="range">
+      <input id="fps_number" min="0" max="120" value="0" type="number">
+    <label for="fps_number">FPS desired (0 for default)</label>
     </div>
     <div id="images">
        <div id="content"></div>
@@ -83,7 +88,6 @@
     document.getElementById("gum_warn").style.display = "none";
   }
 
-  let video_status = false;
   const video = document.createElement("video");
   video.setAttribute("width", 640);
   video.setAttribute("height", 480);
@@ -99,7 +103,6 @@
 
   const snapshots = [];
 
-  let audio_status = false;
   const audio = document.createElement("audio");
   audio.setAttribute("controls", true);
 
@@ -112,7 +115,11 @@
   const snapshot = document.getElementById("snapshot");
   const fps = document.getElementById("fps");
 
-  const fps_input = document.getElementById("fps_input");
+  const fps_range = document.getElementById("fps_range");
+  const fps_number = document.getElementById("fps_number");
+
+  fps_range.oninput = () => fps_number.value = fps_range.value;
+  fps_number.oninput = () => fps_range.value = fps_number.value;
 
   let saved_stream = null;
   let capturing = false;
@@ -127,47 +134,42 @@
   let fps_constraint;
 
   function startScreen() {
-    video_status = true;
     startMedia("getDisplayMedia", {video: true});
   }
 
   function startAudioVideo() {
-    video_status = true;
-    audio_status = true;
     startMedia("getUserMedia", {video: true, audio: true});
   }
 
   function startAudio() {
-    audio_status = true;
     startMedia("getUserMedia", {audio: true});
   }
 
   function startVideo() {
-    video_status = true;
     startMedia("getUserMedia", {video: true});
   }
 
   function stopMedia() {
-    if (video_status) {
-      if (video.srcObject) {
-        for (const track of video.srcObject.getTracks()) track.stop();
+    if (video.srcObject) {
+      for (const track of video.srcObject.getTracks()) {
+        track.stop();
       }
       video.srcObject = null;
       content.removeChild(video);
-      controls.removeChild(mute);
+      if (mute.parentNode) {
+        controls.removeChild(mute);
+      }
       fps.innerHTML = "";
       stopbuttons.removeChild(snapshot);
       snapshot.value = "Snapshot";
       frames.innerHTML = '';
       capturing = false;
-      video_status = false;
-    } else if (audio_status) {
-      if (audio.srcObject) {
-        for (const track of audio.srcObject.getTracks()) track.stop();
+    } else if (audio.srcObject) {
+      for (const track of audio.srcObject.getTracks()) {
+        track.stop();
       }
       audio.srcObject = null;
       content.removeChild(audio);
-      audio_status = false;
     }
     saved_stream = null;
     stop.style.display = "none";
@@ -177,20 +179,20 @@
 
   function pauseMedia() {
     if (saved_stream) {
-      if (video_status) {
+      if (saved_stream.getVideoTracks().length) {
         video.srcObject = saved_stream;
         video.play();
-      } else if (audio_status) {
+      } else {
         audio.srcObject = saved_stream;
         audio.play();
       }
       saved_stream = null;
     } else {
-      if (video_status) {
+      if (video.srcObject) {
         video.pause();
         saved_stream = video.srcObject;
         video.srcObject = null;
-      } else if (audio_status) {
+      } else if (audio.srcObject) {
         audio.pause();
         saved_stream = audio.srcObject;
         audio.srcObject = null;
@@ -202,7 +204,7 @@
 
   async function startMedia(gum, constraints) {
     if (constraints.video) {
-      const frameRate = fps_input.value || undefined;
+      const frameRate = fps_number.value || undefined;
       constraints.video = Object.assign(constraints.video, {frameRate});
     }
     stop.style.display = "block";
@@ -210,9 +212,9 @@
     try {
       const stream = await navigator.mediaDevices[gum](constraints);
       message.innerHTML = "<p>Success!</p>";
-      if (video_status) {
+      if (stream.getVideoTracks().length) {
         content.appendChild(video);
-        if (audio_status) {
+        if (stream.getAudioTracks().length) {
           controls.appendChild(mute);
           video.muted = muted.checked;
         }
@@ -224,7 +226,7 @@
         first_fps_frames = last_fps_frames = video.mozPaintedFrames;
         fps.innerHTML="FPS now:  0.0 , entire capture:  0.0";
         setTimeout(get_fps, 2000);
-      } else if (audio_status) {
+      } else {
         content.appendChild(audio);
         audio.srcObject = stream;
         audio.play();
@@ -268,7 +270,7 @@
   }
 
   function captureImage() {
-    if (video_status && capturing) {
+    if (video.srcObject && capturing) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 

@@ -204,7 +204,7 @@
 
   async function startMedia(gum, constraints) {
     if (constraints.video) {
-      const frameRate = fps_number.value || undefined;
+      const frameRate = +fps_number.value || undefined;
       constraints.video = Object.assign(constraints.video, {frameRate});
     }
     stop.style.display = "block";

@@ -1,0 +1,40 @@
+<html>
+<meta charset=utf-8>
+<div id="div"></div>
+<video id="video" height="120" autoplay></video><br>
+<button id="gum">Start Camera!</button>
+<button id="stopp">Stop!</button>
+<button id="list">Enumerate Devices!</button>
+<label><input type="checkbox" id="muted">Face-muted</label>
+<div id="div"><br></div>
+<script>
+const log = msg => div.innerHTML += msg + "<br>";
+
+gum.onclick = async () => {
+  try {
+    video.srcObject = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+  } catch (e) {
+    log(e);
+  }
+};
+
+stopp.onclick = () => {
+  video.srcObject.getTracks().forEach(track => track.stop());
+  video.srcObject = null;
+};
+
+muted.onclick = () => {
+  video.srcObject.getTracks().forEach(track => track.enabled = !muted.checked);
+};
+
+list.onclick = async () => {
+  let devices = await navigator.mediaDevices.enumerateDevices();
+  log(devices.length + " devices.");
+  for (let {kind, label, deviceId, groupId} of devices) {
+    log(`${kind}: ${label} id=${deviceId} group=${groupId}`);
+  }
+}
+
+navigator.mediaDevices.ondevicechange = () => log("device change!");
+</script>
+</html>

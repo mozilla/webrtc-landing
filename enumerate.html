@@ -1,26 +1,33 @@
 <html>
 <meta charset=utf-8>
-<div id="div"></div>
 <video id="video" height="120" autoplay></video><br>
-<button id="gum">Start Camera!</button>
+<button id="gum_audio">Start Mic!</button>
+<button id="gum_video">Start Cam!</button>
+<button id="gum_both">Start Both!</button>
 <button id="stopp">Stop!</button>
 <button id="list">Enumerate Devices!</button>
 <label><input type="checkbox" id="muted">Face-muted</label>
 <div id="div"><br></div>
 <script>
-const log = msg => div.innerHTML += msg + "<br>";
+const log = msg => div.innerHTML += `${msg}<br>`;
+let unstopped = [];
 
-gum.onclick = async () => {
+async function gum(constraints) {
   try {
-    video.srcObject = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+    video.srcObject = await navigator.mediaDevices.getUserMedia(constraints);
+    unstopped.push(...video.srcObject.getTracks());
   } catch (e) {
     log(e);
   }
-};
+}
+
+gum_audio.onclick = () => gum({audio: true});
+gum_video.onclick = () => gum({video: true});
+gum_both.onclick = () => gum({video: true, audio: true});
 
 stopp.onclick = () => {
-  video.srcObject.getTracks().forEach(track => track.stop());
-  video.srcObject = null;
+  unstopped.forEach(track => track.stop());
+  unstopped = [];
 };
 
 muted.onclick = () => {

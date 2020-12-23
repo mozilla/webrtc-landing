@@ -92,14 +92,24 @@
   video.setAttribute("width", 640);
   video.setAttribute("height", 480);
 
-  const muted = document.createElement("input");
-  muted.type = "checkbox";
-  muted.checked = true;
-  muted.onclick = () => { video.muted = muted.checked; };
+  const equalizer = document.createElement("canvas");
+  equalizer.setAttribute("width", 25);
+  equalizer.setAttribute("height", 480);
 
-  const mute = document.createElement("label");
-  mute.innerHTML = "Volume mute";
-  mute.insertBefore(muted, mute.firstChild);
+  function createCheckbox(textContent, checked, type = "checkbox") {
+    const label = Object.assign(document.createElement("label"), {textContent});
+    const input = Object.assign(document.createElement("input"), {type});
+    label.insertBefore(input, label.firstChild);
+    return Object.assign(input, {checked});
+  }
+
+  const camOn = createCheckbox("📹", true);
+  const micOn = createCheckbox("🎙️", true);
+  const elementMuted = createCheckbox("🔇", true);
+  elementMuted.onclick = () => {
+    audio.muted = elementMuted.checked;
+    video.muted = elementMuted.checked;
+  };
 
   const snapshots = [];
 
@@ -156,8 +166,8 @@
       }
       video.srcObject = null;
       content.removeChild(video);
-      if (mute.parentNode) {
-        controls.removeChild(mute);
+      if (equalizer.parentNode) {
+        content.removeChild(equalizer);
       }
       fps.innerHTML = "";
       stopbuttons.removeChild(snapshot);
@@ -170,6 +180,12 @@
       }
       audio.srcObject = null;
       content.removeChild(audio);
+      content.removeChild(equalizer);
+    }
+    for (const muted of [elementMuted, camOn, micOn]) {
+      if (muted.parentNode.parentNode) {
+        controls.removeChild(muted.parentNode);
+      }
     }
     saved_stream = null;
     stop.style.display = "none";
@@ -180,10 +196,8 @@
   function pauseMedia() {
     if (saved_stream) {
       if (saved_stream.getVideoTracks().length) {
-        video.srcObject = saved_stream;
         video.play();
       } else {
-        audio.srcObject = saved_stream;
         audio.play();
       }
       saved_stream = null;
@@ -191,11 +205,9 @@
       if (video.srcObject) {
         video.pause();
         saved_stream = video.srcObject;
-        video.srcObject = null;
       } else if (audio.srcObject) {
         audio.pause();
         saved_stream = audio.srcObject;
-        audio.srcObject = null;
       }
     }
   }
@@ -212,12 +224,18 @@
     try {
       const stream = await navigator.mediaDevices[gum](constraints);
       message.innerHTML = "<p>Success!</p>";
-      if (stream.getVideoTracks().length) {
+      const [audioTrack] = stream.getAudioTracks();
+      const [videoTrack] = stream.getVideoTracks();
+      if (audioTrack) {
+        controls.appendChild(elementMuted.parentNode);
+        audio.muted = elementMuted.checked;
+        video.muted = elementMuted.checked;
+      }
+      if (videoTrack) {
         content.appendChild(video);
-        if (stream.getAudioTracks().length) {
-          controls.appendChild(mute);
-          video.muted = muted.checked;
-        }
+        controls.appendChild(camOn.parentNode);
+        camOn.onclick = () => { videoTrack.enabled = camOn.checked; };
+        camOn.onclick();
         video.srcObject = stream;
         video.play();
         frames.innerHTML = '';
@@ -230,6 +248,13 @@
         content.appendChild(audio);
         audio.srcObject = stream;
         audio.play();
+      }
+      if (audioTrack) {
+        content.appendChild(equalizer);
+        startEqualizer(stream);
+        controls.appendChild(micOn.parentNode);
+        micOn.onclick = () => { audioTrack.enabled = micOn.checked; };
+        micOn.onclick();
       }
       running = true;
     } catch (err) {
@@ -286,6 +311,38 @@
       }
       setTimeout(captureImage, 2000);
     }
+  }
+
+  function startEqualizer(stream) {
+    const audioCtx = new AudioContext();
+    const analyser = audioCtx.createAnalyser();
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+
+    const canvasCtx = equalizer.getContext("2d");
+    const data = new Uint8Array(equalizer.width);
+
+    let interval = setInterval(() => {
+      if (stream.getAudioTracks()[0].readyState != "live") {
+        clearInterval(interval);
+        return;
+      }
+      canvasCtx.fillStyle = "#ffffff";
+      canvasCtx.clearRect(0, 0, equalizer.width, equalizer.height);
+      analyser.getByteFrequencyData(data);
+      canvasCtx.lineWidth = 2;
+      let x = 0;
+      for (let y of data) {
+        y = equalizer.height - (y / 128) * equalizer.height / 4;
+        let c = Math.floor((x*255)/equalizer.width);
+        canvasCtx.fillStyle = "rgb("+c+",0,"+(255-x)+")";
+        canvasCtx.fillRect(x, y, 2, equalizer.height - y)
+        x++;
+      }
+      analyser.getByteTimeDomainData(data);
+      canvasCtx.lineWidth = 5;
+      canvasCtx.beginPath();
+      canvasCtx.stroke();
+    }, 1000 * equalizer.width / audioCtx.sampleRate);
   }
 </script>
 

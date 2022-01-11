@@ -64,6 +64,7 @@
       <input value="Microphone" onclick="startAudio();" type="button">
       <input value="Camera &amp; microphone" onclick="startAudioVideo();" type="button">
       <input value="Screen capture" onclick="startScreen();" type="button">
+      <input value="Tab capture" onclick="startTab();" type="button">
       <br>
       <input id="fps_range" min="0" max="120" value="0" type="range">
       <input id="fps_number" min="0" max="120" value="0" type="number">
@@ -135,6 +136,14 @@
 
   function startScreen() {
     startMedia("getDisplayMedia", {video: true});
+  }
+
+  function startTab() {
+    startMedia("getDisplayMedia",
+      {
+        video: { mediaSource: "browser",
+                 scrollWithPage: true },
+      });
   }
 
   function startAudioVideo() {

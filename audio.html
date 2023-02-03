@@ -1,10 +1,10 @@
 <html><head>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-  <title>Simple mozRTCPeerConnection Audio Test</title>
+  <title>Simple RTCPeerConnection Audio Test</title>
 </head>
 <body>
 
-<h1>Simple mozRTCPeerConnection Audio Test</h1>
+<h1>Simple RTCPeerConnection Audio Test</h1>
 Hacked up from the Video test
 <div>
 <button id="tehbutton" onclick="start();">Start!</button>
@@ -137,8 +137,8 @@ Local: <audio tabindex="0" id="localvideo2" controls="controls" height="120" wid
     button.innerHTML = "Stop!";
     button.onclick = stop;
 
-    pc1 = new mozRTCPeerConnection();
-    pc2 = new mozRTCPeerConnection();
+    pc1 = new RTCPeerConnection();
+    pc2 = new RTCPeerConnection();
 
     pc1.onaddstream = function(obj) {
       log("pc1 got remote stream from pc2 " + obj.type);

@@ -1,10 +1,10 @@
 <html><head>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-  <title> mozRTCPeerConnection STUN Gathering Test</title>
+  <title> RTCPeerConnection STUN Gathering Test</title>
 </head>
 <body>
 
-<h1> mozRTCPeerConnection STUN Gathering Test</h1>
+<h1> RTCPeerConnection STUN Gathering Test</h1>
 
 <div id="log"></div>
 
@@ -23,7 +23,7 @@
 
   var configuration = { "iceServers": [{ "urls": ["stun:stun.l.google.com:19302" ]}]};
 
-  pc1 = new mozRTCPeerConnection(configuration);
+  pc1 = new RTCPeerConnection(configuration);
   pc1.onicecandidate = function(c) {
     log("ICE candidate: " + JSON.stringify(c.candidate));
   };

@@ -106,9 +106,6 @@ Note: Audio will feedback unless you use a headset!<br><br>
   if (navigator.mozGetUserMedia) {
     console.log("This appears to be Firefox");
 
-    // The RTCPeerConnection object.
-    RTCPeerConnection = mozRTCPeerConnection;
-
     // Get UserMedia (only difference is the prefix).
     // Code from Adam Barth.
     getUserMedia = navigator.mozGetUserMedia.bind(navigator);

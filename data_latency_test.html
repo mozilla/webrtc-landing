@@ -113,7 +113,7 @@
 
   // pc1.setLocal finished, call pc2.setRemote
   function step2() {
-    pc2 = new mozRTCPeerConnection();
+    pc2 = new RTCPeerConnection();
 
     pc2.ondatachannel = function(event) {
       channel = event.channel;
@@ -204,7 +204,7 @@ function start() {
       datawindow.removeChild(datawindow.firstChild);
     }
 
-    pc1 = new mozRTCPeerConnection();
+    pc1 = new RTCPeerConnection();
 
     pc1.onaddstream = function(obj) {
       log("pc1 got remote stream from pc2 " + obj.type);

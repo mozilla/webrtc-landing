@@ -1,21 +1,41 @@
 <html>
 <meta charset=utf-8>
-<video id="video" height="120" autoplay></video><br>
+<video id="video1" height="120" autoplay></video>
+<video id="video2" height="120" autoplay></video><br>
 <button id="gum_audio">Start Mic!</button>
 <button id="gum_video">Start Cam!</button>
 <button id="gum_both">Start Both!</button>
+<button id="gdm_video">Present!</button>
 <button id="stopp">Stop!</button>
+<button id="speakers">Switch speakers!</button>
 <button id="list">Enumerate Devices!</button>
+<button id="reload">Reload!</button>
 <label><input type="checkbox" id="muted">Face-muted</label>
 <div id="div"><br></div>
 <script>
 const log = msg => div.innerHTML += `${msg}<br>`;
 let unstopped = [];
 
-async function gum(constraints) {
+async function gum({audio, video}) {
   try {
-    video.srcObject = await navigator.mediaDevices.getUserMedia(constraints);
-    unstopped.push(...video.srcObject.getTracks());
+    const stream = await navigator.mediaDevices.getUserMedia({audio, video});
+
+    if (video1.srcObject && !audio != !video) {
+      const [oldvideo] = video1.srcObject.getVideoTracks();
+      const [oldaudio] = video1.srcObject.getAudioTracks();
+      stream.addTrack(audio? oldvideo : oldaudio);
+    }
+    video1.srcObject = stream;
+    unstopped.push(...video1.srcObject.getTracks());
+  } catch (e) {
+    log(e);
+  }
+}
+
+async function gdm(constraints) {
+  try {
+    video2.srcObject = await navigator.mediaDevices.getDisplayMedia(constraints);
+    unstopped.push(...video2.srcObject.getTracks());
   } catch (e) {
     log(e);
   }
@@ -24,23 +44,37 @@ async function gum(constraints) {
 gum_audio.onclick = () => gum({audio: true});
 gum_video.onclick = () => gum({video: true});
 gum_both.onclick = () => gum({video: true, audio: true});
+gdm_video.onclick = () => gdm();
 
 stopp.onclick = () => {
   unstopped.forEach(track => track.stop());
   unstopped = [];
 };
 
+speakers.onclick = async () => {
+  try {
+    const {deviceId, label} = await navigator.mediaDevices.selectAudioOutput();
+    console.log(`Switching speakers to ${label}`);
+    await video1.setSinkId(deviceId);
+  } catch (e) {
+    log(e);
+  }
+}
+
 muted.onclick = () => {
-  video.srcObject.getTracks().forEach(track => track.enabled = !muted.checked);
+  video1.srcObject.getTracks().forEach(track => track.enabled = !muted.checked);
+  video2.srcObject.getTracks().forEach(track => track.enabled = !muted.checked);
 };
 
 list.onclick = async () => {
-  let devices = await navigator.mediaDevices.enumerateDevices();
+  const devices = await navigator.mediaDevices.enumerateDevices();
   log(devices.length + " devices.");
-  for (let {kind, label, deviceId, groupId} of devices) {
+  for (const {kind, label, deviceId, groupId} of devices) {
     log(`${kind}: ${label} id=${deviceId} group=${groupId}`);
   }
 }
+
+reload.onclick = () => location.reload();
 
 navigator.mediaDevices.ondevicechange = () => log("device change!");
 </script>

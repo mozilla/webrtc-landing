@@ -1,0 +1,293 @@
+<html>
+<meta charset=utf-8>
+<table>
+  <tr>
+    <td>
+      <button id="start">Start!</button><button id="halt">Stop!</button><br><br>
+      <table>
+        <tr>
+          <td>Camera:</td>
+          <td><select id="camera" disabled></select></td>
+        </tr>
+        <tr>
+          <td>Microphone:</td>
+          <td><select id="microphone" disabled></select></td>
+        </tr>
+        <tr>
+          <td>Speakers:</td>
+          <td>
+            <span id="newapi">
+              <button id="speakers1">Default system output...</button>
+              <button id="reset" hidden>Reset</button>
+            </span>
+            <span id="oldapi" style="display: none;">
+              <select id="speakers2">
+                <option value="">Default system output</option>
+              </select>
+            </span>
+          </td>
+        </tr>
+      </table><br><br><br>
+    </td>
+    <td>
+<video id="video" width="266" height="200" autoplay controls></video><canvas id="canvas"></canvas><br>
+    </td>
+  </tr>
+</table>
+<div id="div"></div><br>
+<script>
+
+const console = {log: msg => div.innerHTML += `${msg}<br>`};
+
+if (!("selectAudioOutput" in navigator.mediaDevices)) {
+  newapi.style.display = "none";
+  oldapi.style.display = "inline";
+}
+
+if (!localStorage.speakersLabel) {
+  localStorage.speakersLabel = "Default system output";
+}
+speakers1.innerText = `${localStorage.speakersLabel}...`;
+
+if (localStorage.speakers) {
+  reset.hidden = false;
+}
+
+async function getUserMedia(constraints) {
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  for (const track of stream.getTracks()) {
+    localStorage[track.kind] = track.getSettings().deviceId;
+    localStorage[track.kind + "Label"] = track.label;
+    track.addEventListener("ended", async () => {
+      try {
+        console.log(`${track.label}'s ${track.kind} track ended.`);
+        console.log(`Manually fall back to any available ${track.kind} device.`);
+        const [newTrack] = (await replaceUserMedia({audio: true})).getAudioTracks();
+        video.srcObject = spectrum(new MediaStream([newTrack, ...video.srcObject.getVideoTracks()]));
+      } catch (e) {
+        console.log(e);
+      }
+    }, {once:true});
+  }
+  return stream;
+}
+
+async function selectAudioOutput(options) {
+  if ("selectAudioOutput" in navigator.mediaDevices) {
+    return await navigator.mediaDevices.selectAudioOutput(options);
+  }
+  return options;
+}
+
+async function setSinkId({deviceId, label = "Default system output"}) {
+  if (deviceId == video.sinkId) return;
+  console.log(`Switching output to ${label}`);
+  await video.setSinkId(deviceId);
+  speakers1.innerText = `${label}...`;
+  localStorage.speakers = deviceId;
+  localStorage.speakersLabel = label;
+  reset.hidden = !deviceId.length;
+}
+
+start.onclick = async () => {
+  try {
+    video.srcObject = spectrum(await getUserMedia({audio: {deviceId: localStorage.audio}, video: {deviceId: localStorage.video}}));
+    if (localStorage.speakers) {
+      await setSinkId(await selectAudioOutput({deviceId: localStorage.speakers, label: localStorage.speakersLabel}));
+    }
+    updateSelectors();
+    camera.disabled = microphone.disabled = false;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+halt.onclick = () => {
+  for (const track of video.srcObject.getTracks()) {
+    track.stop();
+  }
+}
+
+async function replaceUserMedia(constraints, ...oldTracks) {
+  try {
+    const stream = await getUserMedia(constraints);
+    for (const track of oldTracks) {
+      track.stop();
+    }
+    return stream;
+  } catch (e) {
+    if (e.name != "NotReadableError") throw e;
+    for (const track of oldTracks) {
+      track.stop();
+    }
+    return await getUserMedia(constraints);
+  }
+}
+
+microphone.onchange = async () => {
+  try {
+    const [oldTrack] = video.srcObject.getAudioTracks();
+    const [newTrack] = (await replaceUserMedia({audio: {deviceId: {exact: microphone.value}}}, oldTrack)).getAudioTracks();
+    video.srcObject = spectrum(new MediaStream([newTrack, ...video.srcObject.getVideoTracks()]));
+  } catch (e) {
+    console.log(e);
+    updateSelectors();
+  }
+};
+
+camera.onchange = async () => {
+  try {
+    const [oldTrack] = video.srcObject.getVideoTracks();
+    const [newTrack] = (await replaceUserMedia({video: {deviceId: {exact: camera.value}}}, oldTrack)).getVideoTracks();
+    video.srcObject = new MediaStream([newTrack, ...video.srcObject.getAudioTracks()]);
+  } catch (e) {
+    console.log(e);
+    updateSelectors();
+  }
+};
+
+speakers1.onclick = async () => {
+  try {
+    await setSinkId(await selectAudioOutput());
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+reset.onclick = async () => {
+  try {
+    await setSinkId({deviceId: ""});
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+speakers2.onchange = async () => {
+  try {
+    let label = "", deviceId = speakers2.value;
+
+    for (const option of speakers2.options) {
+      if (speakers2.value == option.value) label = option.innerText;
+    }
+    if (deviceId == "other") {
+      ({deviceId, label} = await selectAudioOutput({deviceId}));
+    }
+    localStorage.speakers = deviceId;
+    localStorage.speakersLabel = label;
+    await setSinkId({deviceId, label});
+    updateSelectors();
+  } catch (e) {
+    console.log(e);
+    updateSelectors();
+  }
+};
+
+navigator.mediaDevices.ondevicechange = async () => {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    if (!devices.find(({deviceId}) => deviceId == video.sinkId)) {
+      reset.onclick();
+    }
+
+    const camCount = camera.childElementCount;
+    const micCount = microphone.childElementCount;
+    const spkCount = speakers2.childElementCount;
+    await updateSelectors();
+    if (camera.childElementCount > camCount) console.log("New camera available");
+    if (microphone.childElementCount > micCount) console.log("New microphone available");
+    if (speakers2.childElementCount > spkCount) console.log("New speakers available");
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+async function updateSelectors() {
+  try {
+    const selectedIds = (video.srcObject?.getTracks() || []).map(t => t.getSettings().deviceId);
+    if (video.sinkId) {
+      selectedIds.push(video.sinkId);
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+
+    for (const [s, type, kind, name] of [[camera, "video", "videoinput", "Camera"],
+                                         [microphone, "audio", "audioinput", "Microphone"],
+                                         [speakers2, "speakers", "audiooutput", "Speakers"]]) {
+      let old = s.value;
+      while (s.firstChild) s.removeChild(s.firstChild);
+      let i = 0;
+      for (const device of devices) {
+        if (device.kind != kind) continue;
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        i++;
+        const match = device.deviceId == localStorage[type];
+        option.text = device.label || (match && localStorage[type+"Label"]) || `${name} ${i}`;
+        if (match) old = option.value;
+        s.appendChild(option);
+      }
+      if ([...s.options].map(({value}) => value).includes(old)) s.value = old;
+      for (const option of s.options) {
+        if (selectedIds.includes(option.value)) s.value = option.value;
+      }
+    }
+    if (!speakers2.children.length && localStorage.speakers?.length) {
+      const option = document.createElement('option');
+      option.value = localStorage.speakers;
+      option.text = localStorage.speakersLabel;
+      speakers2.appendChild(option);
+      speakers2.value = option.value;
+    }
+  } catch (e) {
+    console.log(e);
+  }
+}
+updateSelectors();
+
+function spectrum(stream) {
+  const audioCtx = new AudioContext();
+  const analyser = audioCtx.createAnalyser();
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+
+  canvas.width = 200;
+  canvas.height = 200;
+  const ctx = canvas.getContext("2d");
+  const data = new Uint8Array(canvas.width);
+  ctx.strokeStyle = 'rgb(0, 125, 0)';
+
+  const interval = setInterval(() => {
+    ctx.fillStyle = "#a0a0a0";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    analyser.getByteFrequencyData(data);
+    ctx.lineWidth = 2;
+    let x = 0;
+    for (let d of data) {
+      const y = canvas.height - (d / 128) * canvas.height / 4;
+      const c = Math.floor((x*255)/canvas.width);
+      ctx.fillStyle = `rgb(${c},0,${255-x})`;
+      ctx.fillRect(x++, y, 2, canvas.height - y)
+    }
+
+    analyser.getByteTimeDomainData(data);
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    x = 0;
+    for (let d of data) {
+      const y = canvas.height - (d / 128) * canvas.height / 2;
+      x ? ctx.lineTo(x++, y) : ctx.moveTo(x++, y);
+    }
+    ctx.stroke();
+  }, 1000 * canvas.width / audioCtx.sampleRate);
+
+  const cleanup = () => {
+    audioCtx.close();
+    clearInterval(interval);
+  };
+  const [track] = stream.getAudioTracks();
+  track.addEventListener("ended", cleanup, {once: true});
+  track.stop_ = track.stop;
+  track.stop = () => track.stop_(cleanup());
+  return stream;
+};
+</script>
+</html>
